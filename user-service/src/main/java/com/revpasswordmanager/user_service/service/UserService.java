@@ -1,0 +1,31 @@
+package com.revpasswordmanager.user_service.service;
+
+import com.revpasswordmanager.user_service.entity.User;
+import com.revpasswordmanager.user_service.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    public User registerUser(User user) {
+
+        // 🔐 encode password before saving
+        user.setMasterPassword(
+                passwordEncoder.encode(user.getMasterPassword())
+        );
+
+        return userRepository.save(user);
+    }
+
+    public User getUserById(Long id){
+        return userRepository.findById(id).orElse(null);
+    }
+}
