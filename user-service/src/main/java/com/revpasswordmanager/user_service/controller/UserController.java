@@ -1,12 +1,14 @@
 package com.revpasswordmanager.user_service.controller;
 
 import com.revpasswordmanager.user_service.dto.LoginRequest;
+import com.revpasswordmanager.user_service.dto.RecoverPasswordRequest;
 import com.revpasswordmanager.user_service.dto.OtpRequest;
 import com.revpasswordmanager.user_service.entity.User;
 import com.revpasswordmanager.user_service.security.JwtUtil;
 import com.revpasswordmanager.user_service.service.EmailService;
 import com.revpasswordmanager.user_service.service.UserService;
 import com.revpasswordmanager.user_service.repository.UserRepository;
+
 
 import com.revpasswordmanager.user_service.util.OtpUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,4 +111,72 @@ public class UserController {
                 "userId", user.getId().toString()
         );
     }
+
+    @PutMapping("/change-master-password")
+    public Map<String,String> changeMasterPassword(
+            @RequestParam Long userId,
+            @RequestParam String currentPassword,
+            @RequestParam String newPassword){
+
+        userService.changeMasterPassword(userId,currentPassword,newPassword);
+
+        return Map.of("message","Master password updated successfully");
+    }
+
+    @PostMapping("/recover-password")
+    public Map<String,String> recoverPassword(@RequestBody RecoverPasswordRequest request){
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if(!passwordEncoder.matches(request.getAnswer1(),user.getSecurityAnswer1()) ||
+                !passwordEncoder.matches(request.getAnswer2(),user.getSecurityAnswer2()) ||
+                !passwordEncoder.matches(request.getAnswer3(),user.getSecurityAnswer3())){
+
+            throw new RuntimeException("Security answers incorrect");
+        }
+
+        user.setMasterPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        return Map.of("message","Master password reset successful");
+    }
+
+    @GetMapping("/security-questions/{email}")
+    public Map<String,String> getSecurityQuestions(@PathVariable String email){
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return Map.of(
+                "question1", user.getSecurityQuestion1(),
+                "question2", user.getSecurityQuestion2(),
+                "question3", user.getSecurityQuestion3()
+        );
+    }
+
+    @PutMapping("/update-security-answers")
+    public Map<String,String> updateSecurityAnswers(
+            @RequestParam Long userId,
+            @RequestParam String masterPassword,
+            @RequestParam String answer1,
+            @RequestParam String answer2,
+            @RequestParam String answer3){
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if(!passwordEncoder.matches(masterPassword,user.getMasterPassword())){
+            throw new RuntimeException("Master password incorrect");
+        }
+
+        user.setSecurityAnswer1(passwordEncoder.encode(answer1));
+        user.setSecurityAnswer2(passwordEncoder.encode(answer2));
+        user.setSecurityAnswer3(passwordEncoder.encode(answer3));
+
+        userRepository.save(user);
+
+        return Map.of("message","Security answers updated");
+    }
+
 }
