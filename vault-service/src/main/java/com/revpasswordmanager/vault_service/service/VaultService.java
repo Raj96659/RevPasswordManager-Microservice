@@ -1,5 +1,6 @@
 package com.revpasswordmanager.vault_service.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.revpasswordmanager.vault_service.client.SecurityServiceClient;
 import com.revpasswordmanager.vault_service.client.UserServiceClient;
 import com.revpasswordmanager.vault_service.dto.SecurityRequestDTO;
@@ -13,10 +14,10 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.crypto.SecretKey;
-import java.util.Base64;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class VaultService {
@@ -50,13 +51,15 @@ public class VaultService {
         dto.setWebsite(request.getWebsite());
         dto.setPassword(request.getPassword());
 
+        System.out.println("Calling security service...");
         securityClient.analyzePassword(dto);
 
         // 3️⃣ Encrypt password before saving
         byte[] salt = request.getUserId().toString().getBytes();
 
         SecretKey key =
-                EncryptionUtil.deriveKey(request.getMasterPassword(), salt);
+                EncryptionUtil.deriveKey(user.getMasterPassword(), salt);
+
 
         byte[] iv = EncryptionUtil.generateIV();
 
@@ -89,6 +92,10 @@ public class VaultService {
         System.out.println("⚠ Security service unavailable. Saving credential without analysis.");
 
         // Encrypt password even in fallback
+        if(request.getUserId() == null){
+            throw new RuntimeException("UserId is missing in request");
+        }
+
         byte[] salt = request.getUserId().toString().getBytes();
 
         SecretKey key =
@@ -118,6 +125,7 @@ public class VaultService {
      * Fetch all vault entries of a user
      */
     public List<Vault> getUserVault(Long userId) {
+
         return vaultRepository.findByUserId(userId);
     }
 
@@ -129,9 +137,12 @@ public class VaultService {
         List<Vault> byUsername =
                 vaultRepository.findByUserIdAndUsernameContainingIgnoreCase(userId, query);
 
-        byWebsite.addAll(byUsername);
+        Set<Vault> result = new HashSet<>();
 
-        return byWebsite;
+        result.addAll(byWebsite);
+        result.addAll(byUsername);
+
+        return new ArrayList<>(result);
     }
 
     public List<Vault> filterByCategory(Long userId, String category){
@@ -140,7 +151,54 @@ public class VaultService {
     }
 
     public List<Vault> getFavoritesFirst(Long userId){
-
-        return vaultRepository.findByUserIdOrderByFavoriteDesc(userId);
+        return vaultRepository.findByUserIdAndFavoriteTrue(userId);
     }
+
+
+    public String exportVault(Long userId) throws Exception {
+
+        List<Vault> vaultEntries = vaultRepository.findByUserId(userId);
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        return mapper.writeValueAsString(vaultEntries);
+    }
+
+    public void importVault(Long userId, MultipartFile file) throws Exception {
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        List<Vault> entries = Arrays.asList(
+                mapper.readValue(file.getInputStream(), Vault[].class)
+        );
+
+        for(Vault vault : entries){
+
+            vault.setUserId(userId);
+
+            vaultRepository.save(vault);
+        }
+    }
+
+    public void deleteVault(Long id){
+        vaultRepository.deleteById(id);
+    }
+
+    public String decryptPassword(Long id, String masterPassword) throws Exception {
+
+        Vault vault = vaultRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Vault not found"));
+
+        byte[] salt = vault.getUserId().toString().getBytes();
+
+        SecretKey key = EncryptionUtil.deriveKey(masterPassword, salt);
+
+        byte[] iv = Base64.getDecoder().decode(vault.getIv());
+
+        return EncryptionUtil.decrypt(vault.getEncryptedPassword(), key, iv);
+    }
+
+
+
+
 }

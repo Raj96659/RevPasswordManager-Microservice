@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import jakarta.persistence.Id;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -23,5 +25,11 @@ public class User {
     private String email;
 
     private String masterPassword;
+
+    private boolean twoFactorEnabled;
+
+    private String otp;
+
+    private LocalDateTime otpExpiry;
 
 }

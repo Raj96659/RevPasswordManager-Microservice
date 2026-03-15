@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class SecurityAuditService {
@@ -32,6 +34,7 @@ public class SecurityAuditService {
         int score = passwordService.calculateStrength(password);
 
         boolean weak = passwordService.isWeak(password);
+        boolean breached = passwordService.isBreachedPassword(password);
 
         // 2️⃣ Hash password
         String hash = hashPassword(password);
@@ -76,12 +79,54 @@ public class SecurityAuditService {
             notificationClient.sendNotification(req);
         }
 
+        if(breached){
+
+            NotificationRequest req = new NotificationRequest();
+
+            req.setUserId(userId);
+            req.setMessage("⚠ This password appears in known data breaches");
+            req.setType("SECURITY_ALERT");
+
+            notificationClient.sendNotification(req);
+        }
+
         return repository.save(audit);
     }
 
 
     private String hashPassword(String password){
         return DigestUtils.md5DigestAsHex(password.getBytes());
+    }
+
+    public Map<String,Integer> getSecurityAudit(Long userId){
+
+        List<SecurityAudit> audits = repository.findByUserId(userId);
+
+        int weak = 0;
+        int reused = 0;
+        int strong = 0;
+
+        for(SecurityAudit audit : audits){
+
+            if(audit.isWeakPassword()){
+                weak++;
+            }
+            else if(audit.getStrengthScore() >= 70){
+                strong++;
+            }
+
+            if(audit.isReusedPassword()){
+                reused++;
+            }
+        }
+
+        Map<String,Integer> result = new HashMap<>();
+
+        result.put("weakPasswords", weak);
+        result.put("strongPasswords", strong);
+        result.put("reusedPasswords", reused);
+
+        return result;
     }
 
 }

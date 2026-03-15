@@ -23,6 +23,11 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka
 
+  instance:
+    prefer-ip-address: true
+    hostname: localhost
+    instance-id: ${spring.application.name}:${server.port}
+
 resilience4j:
   circuitbreaker:
     instances:
@@ -30,7 +35,3 @@ resilience4j:
         failureRateThreshold: 50
         minimumNumberOfCalls: 5
         waitDurationInOpenState: 10s
-
-  instance:
-    prefer-ip-address: true
-    instance-id: ${spring.application.name}:${server.port}

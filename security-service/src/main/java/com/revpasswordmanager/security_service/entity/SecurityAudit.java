@@ -29,4 +29,6 @@ public class SecurityAudit {
     private int strengthScore;
 
     private String passwordHash;
+
+    private boolean breachedPassword;
 }

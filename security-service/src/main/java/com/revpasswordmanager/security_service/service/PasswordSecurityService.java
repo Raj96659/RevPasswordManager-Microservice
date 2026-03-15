@@ -39,4 +39,21 @@ public class PasswordSecurityService {
 
         return false;
     }
+
+    public boolean isBreachedPassword(String password){
+
+        List<String> breachedPasswords = List.of(
+                "123456",
+                "password",
+                "123456789",
+                "qwerty",
+                "abc123",
+                "letmein",
+                "welcome",
+                "admin",
+                "password123"
+        );
+
+        return breachedPasswords.contains(password.toLowerCase());
+    }
 }

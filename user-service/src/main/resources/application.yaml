@@ -1,10 +1,10 @@
-
 server:
   port: 8081
 
 spring:
   application:
     name: user-service
+
   config:
     import: optional:configserver:http://localhost:8888
 
@@ -17,6 +17,18 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: yourgmail@gmail.com
+    password: your_app_password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 eureka:
   client:

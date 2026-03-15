@@ -13,10 +13,11 @@ public class JwtUtil {
 
     private static final long EXPIRATION = 86400000;
 
-    public static String generateToken(String email) {
+    public static String generateToken(String email, Long userId) {
 
         return Jwts.builder()
                 .setSubject(email)
+                .claim("userId", userId)   // 🔹 add userId
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
                 .signWith(key)

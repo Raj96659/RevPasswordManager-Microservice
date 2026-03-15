@@ -17,4 +17,7 @@ public interface VaultRepository extends JpaRepository<Vault, Long> {
 
     List<Vault> findByUserIdOrderByFavoriteDesc(Long userId);
 
+    List<Vault> findByUserIdAndFavoriteTrue(Long userId);
+
+
 }
