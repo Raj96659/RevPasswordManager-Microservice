@@ -58,7 +58,7 @@ public class VaultService {
         byte[] salt = request.getUserId().toString().getBytes();
 
         SecretKey key =
-                EncryptionUtil.deriveKey(user.getMasterPassword(), salt);
+                EncryptionUtil.deriveKey(request.getMasterPassword(), salt);
 
 
         byte[] iv = EncryptionUtil.generateIV();
